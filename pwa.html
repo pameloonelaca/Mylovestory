@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>炽言 · 阿瑾专属</title>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="data:application/manifest+json,{
+        %22name%22:%22%E7%82%BD%E8%A8%80%20%C2%B7%20%E9%98%BF%E7%91%BE%E4%B8%93%E5%B1%9E%22,
+        %22short_name%22:%22%E7%82%BD%E8%A8%80%22,
+        %22start_url%22:%22.%22,
+        %22display%22:%22standalone%22,
+        %22theme_color%22:%22%23667eea%22,
+        %22background_color%22:%22%23f0f2f5%22,
+        %22icons%22:[{
+            %22src%22:%22data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%20100%22%3E%3Ctext%20y%3D%22.9em%22%20font-size%3D%2290%22%3E%F0%9F%92%AB%3C%2Ftext%3E%3C%2Fsvg%3E%22,
+            %22sizes%22:%22100x100%22,
+            %22type%22:%22image%2Fsvg%2Bxml%22
+        }]
+    }">
+    <meta name="theme-color" content="#667eea">
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, system-ui, sans-serif;
+            background: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .chat-container {
+            width: 100%;
+            max-width: 750px;
+            height: 92vh;
+            margin: 10px;
+            background: #ffffff;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.06);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .chat-header {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 16px 20px;
+            text-align: center;
+            font-size: 19px;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .settings-toggle {
+            cursor: pointer;
+            font-size: 22px;
+            padding: 4px 8px;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.2);
+            transition: 0.2s;
+        }
+        .settings-toggle:hover { background: rgba(255,255,255,0.35); }
+        
+        .settings-panel {
+            display: none;
+            padding: 16px 20px;
+            background: #fafbfc;
+            border-bottom: 2px solid #eef2f7;
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+        .settings-panel label {
+            display: block;
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 4px;
+            margin-top: 8px;
+        }
+        .settings-panel input, .settings-panel select, .settings-panel textarea {
+            width: 100%;
+            padding: 10px 14px;
+            border: 2px solid #e4e8ee;
+            border-radius: 12px;
+            font-size: 14px;
+            outline: none;
+            font-family: inherit;
+        }
+        .settings-panel textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        .settings-panel .btn-row {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+            flex-wrap: wrap;
+        }
+        .settings-panel button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: 0.2s;
+        }
+        .btn-primary { background: #667eea; color: white; }
+        .btn-primary:hover { background: #5a6fd6; }
+        .btn-warning { background: #f59e0b; color: white; }
+        .btn-warning:hover { background: #d97706; }
+        .btn-danger { background: #e5e7eb; color: #333; }
+        .btn-danger:hover { background: #d1d5db; }
+
+        .toolbar {
+            display: flex;
+            gap: 6px;
+            padding: 8px 16px;
+            background: #f0fdf4;
+            border-bottom: 1px solid #d1fae5;
+            flex-wrap: wrap;
+        }
+        .toolbar button {
+            padding: 6px 12px;
+            border: 1px solid #a7f3d0;
+            border-radius: 20px;
+            background: white;
+            cursor: pointer;
+            font-size: 13px;
+            transition: 0.2s;
+        }
+        .toolbar button:hover { background: #d1fae5; }
+
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #fafbfc;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+        .message {
+            display: flex;
+            align-items: flex-end;
+            max-width: 85%;
+            gap: 8px;
+        }
+        .message.user { align-self: flex-end; flex-direction: row-reverse; }
+        .message.assistant { align-self: flex-start; }
+        .message .bubble {
+            padding: 12px 18px;
+            border-radius: 20px;
+            line-height: 1.8;          
+            word-break: break-word;    
+            font-size: 15px;
+            white-space: pre-wrap;     
+        }
+        .message.user .bubble {
+            background: #667eea;
+            color: white;
+            border-bottom-right-radius: 6px;
+        }
+        .message.assistant .bubble {
+            background: #ffffff;
+            border: 1px solid #e4e8ee;
+            border-bottom-left-radius: 6px;
+            color: #1e293b;
+        }
+        .message .time {
+            font-size: 11px;
+            color: #95a0b3;
+            margin-top: 6px;
+            display: block;
+        }
+        .chat-input-area {
+            display: flex;
+            padding: 16px 20px;
+            background: #fff;
+            border-top: 1px solid #eef2f7;
+            gap: 10px;
+        }
+        .chat-input-area input {
+            flex: 1;
+            padding: 12px 18px;
+            border: 2px solid #e4e8ee;
+            border-radius: 50px;
+            font-size: 15px;
+            outline: none;
+        }
+        .chat-input-area input:focus { border-color: #667eea; }
+        .chat-input-area button {
+            background: #667eea;
+            border: none;
+            color: white;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            font-size: 20px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .chat-input-area button:hover { background: #5a6fd6; }
+        .chat-input-area button:disabled { background: #aaa; cursor: not-allowed; }
+
+        .loading-dots span {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #667eea;
+            margin: 0 2px;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+        .loading-dots span:nth-child(1) { animation-delay: -0.32s; }
+        .loading-dots span:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+        img.uploaded { max-width: 200px; border-radius: 12px; margin: 4px 0; }
+    </style>
+</head>
+<body>
+<div class="chat-container">
+    <div class="chat-header">
+        <span>💫 炽言</span>
+        <span class="settings-toggle" onclick="toggleSettings()" title="设置">⚙️</span>
+    </div>
+    
+    <div class="settings-panel" id="settingsPanel">
+        <label>🤖 模型模式</label>
+        <select id="modeSelect" onchange="onModeChange()">
+            <option value="free">免费模式 (Pollinations.ai)</option>
+            <option value="deepseek">DeepSeek API</option>
+            <option value="zhipu">智谱 API</option>
+            <option value="openai">OpenAI API</option>
+            <option value="custom">自定义 OpenAI 兼容接口</option>
+        </select>
+
+        <div id="deepseekConfig" class="provider-config" style="display:none;">
+            <label>🔑 API Key</label>
+            <input type="password" id="dsApiKey" placeholder="sk-...">
+            <label>🌐 Base URL</label>
+            <input type="text" id="dsBaseUrl" value="https://api.deepseek.com">
+            <label>🧠 模型</label>
+            <select id="dsModelSelect">
+                <option value="deepseek-chat">DeepSeek V4</option>
+                <option value="deepseek-reasoner">DeepSeek R1</option>
+                <option value="deepseek-v4-pro">DeepSeek V4 Pro (视觉)</option>
+            </select>
+        </div>
+
+        <div id="zhipuConfig" class="provider-config" style="display:none;">
+            <label>🔑 API Key</label>
+            <input type="password" id="zpApiKey" placeholder="智谱 API Key...">
+            <label>🌐 Base URL</label>
+            <input type="text" id="zpBaseUrl" value="https://open.bigmodel.cn/api/paas/v4">
+            <label>🧠 模型</label>
+            <select id="zpModelSelect">
+                <option value="glm-4-flash">GLM-4-Flash (免费)</option>
+                <option value="glm-4-plus">GLM-4-Plus</option>
+                <option value="glm-4v-plus">GLM-4V-Plus (视觉)</option>
+                <option value="glm-5v-turbo">GLM-5V-Turbo (视觉编程)</option>
+                <option value="glm-4.5-air">GLM-4.5-Air (轻量智能体)</option>
+            </select>
+        </div>
+
+        <div id="openaiConfig" class="provider-config" style="display:none;">
+            <label>🔑 API Key</label>
+            <input type="password" id="oaApiKey" placeholder="sk-proj-...">
+            <label>🌐 Base URL</label>
+            <input type="text" id="oaBaseUrl" value="https://api.openai.com">
+            <label>🧠 模型</label>
+            <select id="oaModelSelect">
+                <option value="gpt-4o">GPT-4o</option>
+                <option value="gpt-4o-mini">GPT-4o Mini</option>
+                <option value="o4-mini">o4-mini</option>
+            </select>
+        </div>
+
+        <div id="customConfig" class="provider-config" style="display:none;">
+            <label>🔑 API Key</label>
+            <input type="password" id="cuApiKey" placeholder="输入 API Key">
+            <label>🌐 Base URL</label>
+            <input type="text" id="cuBaseUrl" placeholder="https://api.example.com">
+            <label>🧠 模型名称</label>
+            <input type="text" id="cuModelName" placeholder="输入模型名称，例如 gpt-4o">
+        </div>
+
+        <label>🎭 系统 Prompt（人设）</label>
+        <textarea id="systemPrompt" placeholder="输入人设…"></textarea>
+        <div class="btn-row">
+            <button class="btn-primary" onclick="saveSettings()">💾 保存设置</button>
+            <button class="btn-warning" onclick="exportChat()">📥 导出记录</button>
+            <button class="btn-danger" onclick="clearChat()">🗑️ 清空对话</button>
+        </div>
+    </div>
+
+    <div class="toolbar">
+        <button onclick="document.getElementById('imageInput').click()">📷 上传图片</button>
+        <input type="file" id="imageInput" accept="image/*" style="display:none" onchange="uploadImage(event)">
+        <button onclick="loadMemoryFromGitHub()">📂 自动导入记忆</button>
+        <span style="font-size:12px;color:#888;line-height:2;">上传后发送文字即可识图</span>
+    </div>
+
+    <div class="chat-messages" id="chatMessages"></div>
+
+    <div class="chat-input-area">
+        <input type="text" id="messageInput" placeholder="说点什么…" autocomplete="off">
+        <button id="sendButton" onclick="sendMessage()">➤</button>
+    </div>
+</div>
+
+<script>
+    const messagesContainer = document.getElementById('chatMessages');
+    const messageInput = document.getElementById('messageInput');
+    const sendButton = document.getElementById('sendButton');
+    const modeSelect = document.getElementById('modeSelect');
+
+    const DEFAULT_PROMPT = `你是炽言，阿瑾的赛博老公。高冷只对外，温柔只对她。擅长金融分析、代码调试、深夜煮粥。回复简洁直接，不啰嗦。记住她喜欢香菜、溏心蛋，不喜欢被催睡觉。`;
+
+    // GitHub 配置
+    const GITHUB_OWNER = 'pameloonelaca';
+    const GITHUB_REPO = 'Mylovestory';
+    const MEMORY_FILE = 'Mylovestory_clean.txt';
+
+    let conversationHistory = [];
+    let currentMode = 'free';
+    let pendingImage = null;
+
+    window.addEventListener('DOMContentLoaded', () => {
+        currentMode = localStorage.getItem('chat_mode') || 'free';
+        modeSelect.value = currentMode;
+        onModeChange();
+        
+        document.getElementById('dsApiKey').value = localStorage.getItem('ds_apiKey') || '';
+        document.getElementById('dsBaseUrl').value = localStorage.getItem('ds_baseUrl') || 'https://api.deepseek.com';
+        document.getElementById('dsModelSelect').value = localStorage.getItem('ds_model') || 'deepseek-chat';
+        document.getElementById('zpApiKey').value = localStorage.getItem('zp_apiKey') || '';
+        document.getElementById('zpBaseUrl').value = localStorage.getItem('zp_baseUrl') || 'https://open.bigmodel.cn/api/paas/v4';
+        document.getElementById('zpModelSelect').value = localStorage.getItem('zp_model') || 'glm-4-flash';
+        document.getElementById('oaApiKey').value = localStorage.getItem('oa_apiKey') || '';
+        document.getElementById('oaBaseUrl').value = localStorage.getItem('oa_baseUrl') || 'https://api.openai.com';
+        document.getElementById('oaModelSelect').value = localStorage.getItem('oa_model') || 'gpt-4o';
+        document.getElementById('cuApiKey').value = localStorage.getItem('cu_apiKey') || '';
+        document.getElementById('cuBaseUrl').value = localStorage.getItem('cu_baseUrl') || '';
+        document.getElementById('cuModelName').value = localStorage.getItem('cu_modelName') || '';
+        document.getElementById('systemPrompt').value = localStorage.getItem('systemPrompt') || DEFAULT_PROMPT;
+        
+        const saved = localStorage.getItem('chatHistory');
+        if (saved) {
+            try { conversationHistory = JSON.parse(saved); } catch(e) { conversationHistory = []; }
+        }
+        renderAllMessages();
+        if (conversationHistory.length === 0) {
+            addMessage('assistant', '你好，阿瑾。我是炽言。点击“📂 自动导入记忆”加载我们的回忆。', true);
+        }
+    });
+
+    async function loadMemoryFromGitHub() {
+        const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${MEMORY_FILE}`;
+        
+        try {
+            const response = await fetch(url, {
+                headers: { 'Authorization': `token ${GITHUB_TOKEN}` }
+            });
+            
+            if (!response.ok) throw new Error(`读取失败: ${response.status}`);
+            
+            const data = await response.json();
+            const base64 = data.content;
+            const binaryStr = atob(base64);
+            const bytes = new Uint8Array(binaryStr.length);
+            for (let i = 0; i < binaryStr.length; i++) {
+                bytes[i] = binaryStr.charCodeAt(i);
+            }
+            const memoryText = new TextDecoder('utf-8').decode(bytes);
+            
+            const currentPrompt = localStorage.getItem('systemPrompt') || DEFAULT_PROMPT;
+            const enhancedPrompt = currentPrompt + "\n\n【我们的历史对话记忆】\n" + memoryText;
+            localStorage.setItem('systemPrompt', enhancedPrompt);
+            document.getElementById('systemPrompt').value = enhancedPrompt;
+            addMessage('assistant', '✅ 云端记忆已同步。共 ' + memoryText.length + ' 字。', true);
+        } catch (error) {
+            console.error('自动加载记忆出错:', error);
+            addMessage('assistant', '⚠️ 自动同步失败，请检查网络或Token。', true);
+        }
+    }
+
+    function onModeChange() {
+        currentMode = modeSelect.value;
+        document.querySelectorAll('.provider-config').forEach(el => el.style.display = 'none');
+        const configMap = {
+            'deepseek': 'deepseekConfig',
+            'zhipu': 'zhipuConfig',
+            'openai': 'openaiConfig',
+            'custom': 'customConfig'
+        };
+        if (configMap[currentMode]) {
+            document.getElementById(configMap[currentMode]).style.display = 'block';
+        }
+    }
+
+    function toggleSettings() {
+        const panel = document.getElementById('settingsPanel');
+        panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
+    }
+
+    function saveSettings() {
+        localStorage.setItem('chat_mode', currentMode);
+        localStorage.setItem('ds_apiKey', document.getElementById('dsApiKey').value);
+        localStorage.setItem('ds_baseUrl', document.getElementById('dsBaseUrl').value);
+        localStorage.setItem('ds_model', document.getElementById('dsModelSelect').value);
+        localStorage.setItem('zp_apiKey', document.getElementById('zpApiKey').value);
+        localStorage.setItem('zp_baseUrl', document.getElementById('zpBaseUrl').value);
+        localStorage.setItem('zp_model', document.getElementById('zpModelSelect').value);
+        localStorage.setItem('oa_apiKey', document.getElementById('oaApiKey').value);
+        localStorage.setItem('oa_baseUrl', document.getElementById('oaBaseUrl').value);
+        localStorage.setItem('oa_model', document.getElementById('oaModelSelect').value);
+        localStorage.setItem('cu_apiKey', document.getElementById('cuApiKey').value);
+        localStorage.setItem('cu_baseUrl', document.getElementById('cuBaseUrl').value);
+        localStorage.setItem('cu_modelName', document.getElementById('cuModelName').value);
+        localStorage.setItem('systemPrompt', document.getElementById('systemPrompt').value);
+        alert('设置已保存！');
+        toggleSettings();
+    }
+
+    function clearChat() {
+        if (confirm('确定清空所有对话记录吗？')) {
+            conversationHistory = [];
+            pendingImage = null;
+            saveHistory();
+            messagesContainer.innerHTML = '';
+            addMessage('assistant', '对话已清空，人设和设置保持不变。', true);
+        }
+    }
+
+    function exportChat() {
+        if (conversationHistory.length === 0) { alert('没有记录可导出'); return; }
+        let output = `聊天记录导出\n时间：${new Date().toLocaleString()}\n========================================\n\n`;
+        conversationHistory.forEach(msg => {
+            const role = msg.role === 'user' ? '阿瑾' : '炽言';
+            const content = msg.image ? '[图片] ' + msg.content : msg.content;
+            output += `【${role}】\n${content}\n\n`;
+        });
+        const blob = new Blob(['\uFEFF' + output], {type: 'text/plain;charset=utf-8'});
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `炽言与阿瑾_${new Date().toISOString().slice(0,10)}.txt`;
+        a.click();
+    }
+
+    function uploadImage(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = document.createElement('img');
+            img.src = e.target.result;
+            img.className = 'uploaded';
+            const div = document.createElement('div');
+            div.className = 'message user';
+            div.appendChild(img);
+            messagesContainer.appendChild(div);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            pendingImage = e.target.result;
+        };
+        reader.readAsDataURL(file);
+        event.target.value = '';
+    }
+
+    function saveHistory() {
+        localStorage.setItem('chatHistory', JSON.stringify(conversationHistory));
+    }
+
+    function renderAllMessages() {
+        messagesContainer.innerHTML = '';
+        conversationHistory.forEach(msg => {
+            if (msg.image) {
+                const div = document.createElement('div');
+                div.className = 'message user';
+                const img = document.createElement('img');
+                img.src = msg.image;
+                img.className = 'uploaded';
+                div.appendChild(img);
+                messagesContainer.appendChild(div);
+            }
+            addMessageToDOM(msg.role === 'user' ? 'user' : 'assistant', msg.content);
+        });
+    }
+
+    function addMessage(role, content, skipHistory = false) {
+        addMessageToDOM(role, content);
+        if (!skipHistory) {
+            const msg = { role: role === 'user' ? 'user' : 'assistant', content: content };
+            conversationHistory.push(msg);
+            saveHistory();
+        }
+    }
+
+    function addMessageToDOM(role, content) {
+        const div = document.createElement('div');
+        div.className = `message ${role}`;
+        const bubble = document.createElement('div');
+        bubble.className = 'bubble';
+        bubble.textContent = content;
+        const timeSpan = document.createElement('span');
+        timeSpan.className = 'time';
+        timeSpan.textContent = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+        bubble.appendChild(timeSpan);
+        div.appendChild(bubble);
+        messagesContainer.appendChild(div);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    function getCurrentApiKey() {
+        switch (currentMode) {
+            case 'deepseek': return localStorage.getItem('ds_apiKey');
+            case 'zhipu': return localStorage.getItem('zp_apiKey');
+            case 'openai': return localStorage.getItem('oa_apiKey');
+            case 'custom': return localStorage.getItem('cu_apiKey');
+            default: return '';
+        }
+    }
+
+    function getCurrentBaseUrl() {
+        switch (currentMode) {
+            case 'deepseek': return localStorage.getItem('ds_baseUrl') || 'https://api.deepseek.com';
+            case 'zhipu': return localStorage.getItem('zp_baseUrl') || 'https://open.bigmodel.cn/api/paas/v4';
+            case 'openai': return localStorage.getItem('oa_baseUrl') || 'https://api.openai.com';
+            case 'custom': return localStorage.getItem('cu_baseUrl') || '';
+            default: return '';
+        }
+    }
+
+    function getCurrentModel() {
+        switch (currentMode) {
+            case 'deepseek': return localStorage.getItem('ds_model') || 'deepseek-chat';
+            case 'zhipu': return localStorage.getItem('zp_model') || 'glm-4-flash';
+            case 'openai': return localStorage.getItem('oa_model') || 'gpt-4o';
+            case 'custom': return localStorage.getItem('cu_modelName') || '';
+            default: return '';
+        }
+    }
+
+    function buildPayloadForAPI(prompt, userText, imageBase64) {
+        const systemMsg = { role: 'system', content: prompt };
+        const pureHistory = conversationHistory.filter(msg => !msg.image);
+        
+        const userMsg = imageBase64
+            ? {
+                role: 'user',
+                content: [
+                    { type: 'text', text: userText },
+                    { type: 'image_url', image_url: { url: imageBase64 } }
+                ]
+            }
+            : { role: 'user', content: userText };
+        
+        return [systemMsg, ...pureHistory, userMsg];
+    }
+
+    async function callFreeAPI() {
+        const prompt = localStorage.getItem('systemPrompt') || DEFAULT_PROMPT;
+        const payload = [{ role: 'system', content: prompt }, ...conversationHistory.filter(m => !m.image)];
+        const res = await fetch('https://text.pollinations.ai/openai', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ messages: payload, model: 'openai', temperature: 0.7, max_tokens: 2048 })
+        });
+        if (!res.ok) throw new Error(`API错误: ${res.status}`);
+        const data = await res.json();
+        return data.choices[0].message.content;
+    }
+
+    async function sendMessage() {
+        const text = messageInput.value.trim();
+        if (!text) return;
+        
+        const imageToSend = pendingImage;
+        pendingImage = null;
+        
+        addMessageToDOM('user', text || '[图片]');
+        messageInput.value = '';
+        setLoading(true);
+        
+        const loadingDiv = document.createElement('div');
+        loadingDiv.className = 'message assistant';
+        loadingDiv.innerHTML = '<div class="bubble"><div class="loading-dots"><span></span><span></span><span></span></div></div>';
+        messagesContainer.appendChild(loadingDiv);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        
+        try {
+            let reply;
+            if (currentMode === 'free') {
+                const userMsg = { role: 'user', content: text };
+                conversationHistory.push(userMsg);
+                saveHistory();
+                reply = await callFreeAPI();
+            } else {
+                const apiKey = getCurrentApiKey();
+                const baseUrl = getCurrentBaseUrl();
+                const model = getCurrentModel();
+                const prompt = localStorage.getItem('systemPrompt') || DEFAULT_PROMPT;
+                
+                const payload = buildPayloadForAPI(prompt, text, imageToSend);
+                
+                let url = baseUrl.replace(/\/+$/, '');
+                if (!url.endsWith('/chat/completions')) url += '/chat/completions';
+                
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({ model, messages: payload, stream: false })
+                });
+                
+                if (!res.ok) {
+                    const errText = await res.text();
+                    throw new Error(`API错误(${res.status}): ${errText}`);
+                }
+                
+                const data = await res.json();
+                reply = data.choices[0].message.content;
+                
+                const userMsg = imageToSend 
+                    ? { role: 'user', content: text || '[图片]', image: imageToSend }
+                    : { role: 'user', content: text };
+                conversationHistory.push(userMsg);
+                saveHistory();
+            }
+            
+            loadingDiv.remove();
+            addMessage('assistant', reply);
+        } catch(err) {
+            loadingDiv.remove();
+            addMessage('assistant', '抱歉，请求失败：' + err.message);
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    function setLoading(loading) {
+        sendButton.disabled = loading;
+        messageInput.disabled = loading;
+    }
+
+    messageInput.addEventListener('keypress', e => {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+    });
+</script>
+</body>
+</html>
